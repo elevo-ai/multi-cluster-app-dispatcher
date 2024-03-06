@@ -1,8 +1,0 @@
-# Instructions to build foresight/multi-cluster-app-dispatcher fore Aizen Foresight
-
-## One time setup
-
-### Dependencies
-  - Install Go (version 1.20) 
-     dnf install golang-bin
-  - 
