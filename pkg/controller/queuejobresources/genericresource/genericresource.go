@@ -438,7 +438,7 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
 	if !isFound {
 		klog.Warningf("[hasFields] No containers field found in raw object: %#v", subspec)
-		return false, 0, nil
+		return false, replicas, nil
 	}
 	objContainers := make([]v1.Container, len(containerList))
 	for _, container := range containerList {
@@ -531,8 +531,9 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
 		}
 
-		// Addd individual pods to results
+		// Add individual pods to results
 		var replicaCount int = int(replicas)
+		klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] replicaCount %v \n", replicaCount)
 		for i := 0; i < replicaCount; i++ {
 			podResourcesList = append(podResourcesList, podTotalresource)
 		}

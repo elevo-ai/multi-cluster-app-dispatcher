@@ -42,6 +42,14 @@ func EmptyResource() *Resource {
 	}
 }
 
+func MinResource() *Resource {
+	return &Resource{
+		MilliCPU: 0.1,
+		Memory:   10,
+		GPU:      0,
+	}
+}
+
 func (r *Resource) Clone() *Resource {
 	clone := &Resource{
 		MilliCPU: r.MilliCPU,
