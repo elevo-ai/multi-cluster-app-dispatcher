@@ -31,6 +31,7 @@ ifneq ($(strip $(GIT_BRANCH)),)
 	# replace invalid characters that might exist in the branch name
 	TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
 	TAG:=${TAG}-${RELEASE_VER}
+	TAG:=0.0.1
 endif
 
 .PHONY: print-global-variables
