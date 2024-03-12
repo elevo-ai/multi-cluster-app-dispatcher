@@ -193,13 +193,28 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 	nodes, _ := qjm.clients.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	startTime := time.Now()
 	for _, node := range nodes.Items {
+		var specNodeName = "spec.nodeName"
+		klog.V(10).Infof("[allocatableCapacity] %s:%s", specNodeName, node.Name)
+
 		// skip unschedulable nodes
 		if node.Spec.Unschedulable {
 			continue
 		}
+
+		var skipNode bool = false
+		for _, taint := range node.Spec.Taints {
+			if taint.Effect == "NoSchedule" {
+				klog.V(6).Infof("[allocatableCapacity] allocatable  %s is tainted node Total: %v, will not be included in cluster state calculation.",
+				node.Name, node.Status.Allocatable)
+				skipNode = true
+				break
+			}
+		}
+		if skipNode { continue }
+
 		nodeResource := clusterstateapi.NewResource(node.Status.Allocatable)
 		capacity.Add(nodeResource)
-		var specNodeName = "spec.nodeName"
+		klog.V(10).Infof("[allocatableCapacity] node capacity:%v and nodeName %s", capacity, node.Name)
 		labelSelector := fmt.Sprintf("%s=%s", specNodeName, node.Name)
 		podList, err := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{FieldSelector: labelSelector})
 		// TODO: when no pods are listed, do we send entire node capacity as available
@@ -212,12 +227,95 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 				for _, container := range pod.Spec.Containers {
 					usedResource := clusterstateapi.NewResource(container.Resources.Requests)
 					capacity.Sub(usedResource)
+					klog.V(10).Infof("[allocatableCapacity] current node capacity:%v ", capacity)
 				}
 			}
 		}
 	}
 	klog.Infof("[allocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
 	return capacity
+}
+//AIZEN added
+func (qjm *XController) NewallocatableCapacity(aggqj_list []*clusterstateapi.Resource ) *clusterstateapi.Resource {
+	capacity := clusterstateapi.EmptyResource()
+	nodes, _ := qjm.clients.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	startTime := time.Now()
+	limited_nodeCapacity := clusterstateapi.MinResource()
+	podResource := clusterstateapi.EmptyResource()
+
+	klog.V(10).Infof("[NewallocatableCapacity]: length:%v", len(aggqj_list))
+	for _, podqj := range aggqj_list {
+		podResource = podqj
+		klog.V(6).Infof("[NewallocatableCapacity]: Begin podResource:%v", podResource)
+	}
+	for _, node := range nodes.Items {
+		nodeCapacity := clusterstateapi.EmptyResource()
+		var specNodeName = "spec.nodeName"
+		klog.V(10).Infof("[NewallocatableCapacity] %s:%s", specNodeName, node.Name)
+
+		// skip unschedulable nodes
+		if node.Spec.Unschedulable {
+			continue
+		}
+
+		var skipNode bool = false
+		for _, taint := range node.Spec.Taints {
+			if taint.Effect == "NoSchedule" {
+				klog.V(10).Infof("[NewallocatableCapacity] allocatable  %s is tainted node Total: %v, will not be included in cluster state calculation.",
+				node.Name, node.Status.Allocatable)
+				skipNode = true
+				break
+			}
+		}
+		if skipNode { continue }
+
+		nodeResource := clusterstateapi.NewResource(node.Status.Allocatable)
+		capacity.Add(nodeResource)
+		nodeCapacity.Add(nodeResource)
+
+		klog.V(10).Infof("[NewallocatableCapacity]: capacity:%v and nodeCapacity:%v and nodeName %s", capacity, nodeCapacity,node.Name)
+
+		labelSelector := fmt.Sprintf("%s=%s", specNodeName, node.Name)
+		podList, err := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{FieldSelector: labelSelector})
+
+		if err != nil {
+			klog.Errorf("[NewallocatableCapacity] Error listing pods %v", err)
+		}
+		for _, pod := range podList.Items {
+			if _, ok := pod.GetLabels()["appwrappers.mcad.ibm.com"]; !ok && pod.Status.Phase != v1.PodFailed && pod.Status.Phase != v1.PodSucceeded {
+				for _, container := range pod.Spec.Containers {
+					usedResource := clusterstateapi.NewResource(container.Resources.Requests)
+					capacity.Sub(usedResource)
+					nodeCapacity.Sub(usedResource)
+					klog.V(10).Infof("[NewallocatableCapacity]: current capacity:%v and nodeCapacity:%v", capacity, nodeCapacity)
+				}
+			}
+		}
+		i := 0
+		for _, podqj := range aggqj_list {
+			podResource = podqj
+			if podResource.LessEqual(nodeCapacity) {
+				klog.V(6).Infof("[NewallocatableCapacity]: Allocated podResource:%v", podResource)
+				nodeCapacity.Sub(podResource)
+			} else {
+				aggqj_list[i] = podqj
+				i++
+			}
+		}
+		//remove pod from aggqj list
+		for j:=i; j< len(aggqj_list); j++ {
+			aggqj_list[j] = nil
+		}
+		aggqj_list = aggqj_list[:i]
+	}
+
+	if (len(aggqj_list) == 0 ) {
+		klog.Infof("[NewallocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
+		return capacity
+	} else {
+		klog.Infof("[NewallocatableCapacity] The limited node capacity to dispatch appwrapper is %v and time took to calculate is %v", limited_nodeCapacity, time.Since(startTime))
+		return limited_nodeCapacity
+	}
 }
 
 // NewJobController create new AppWrapper Controller
@@ -568,6 +666,7 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 		itemsList, _ := genericresource.GetListOfPodResourcesFromOneGenericItem(&genericItem)
 		for i := 0; i < len(itemsList); i++ {
 			retVal = append(retVal, itemsList[i])
+			klog.V(10).Infof("[GetAggregatedResourcesPerGenericItem]: appended to retval")
 		}
 	}
 
@@ -1101,6 +1200,9 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				// The reimplementation should fix issue : https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
 				var unallocatedResources = clusterstateapi.EmptyResource()
 				unallocatedResources = qjm.allocatableCapacity()
+
+				aggqj_list := qjm.GetAggregatedResourcesPerGenericItem(qj)
+				unallocatedResources = qjm.NewallocatableCapacity(aggqj_list)
 				for unallocatedResources.IsEmpty() {
 					unallocatedResources.Add(qjm.allocatableCapacity())
 					if !unallocatedResources.IsEmpty() {
