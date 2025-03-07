@@ -213,7 +213,7 @@ type AppWrapperStatus struct {
 	TotalCPU int32 `json:"totalcpu,omitempty"`
 
 	// The amount of memory consumed by all pods belonging to the AppWrapper.
-	TotalMemory int32 `json:"totalmemory,omitempty"`
+	TotalMemory int64 `json:"totalmemory,omitempty"`
 
 	// The total number of GPUs consumed by all pods belonging to the AppWrapper.
 	TotalGPU int32 `json:"totalgpu,omitempty"`

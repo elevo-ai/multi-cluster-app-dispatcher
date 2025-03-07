@@ -169,7 +169,7 @@ func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	// Total resources by all running pods
 	queuejob.Status.TotalGPU = int32(totalResourcesConsumedForPodPhases.GPU)
 	queuejob.Status.TotalCPU = int32(totalResourcesConsumedForPodPhases.MilliCPU)
-	queuejob.Status.TotalMemory = int32(totalResourcesConsumedForPodPhases.Memory)
+	queuejob.Status.TotalMemory = int64(totalResourcesConsumedForPodPhases.Memory)
 
 	queuejob.Status.PendingPodConditions = nil
 	for podName, cond := range podsConditionMap {
@@ -859,7 +859,7 @@ func (qjm *XController) getDispatchedAppWrappers(restConfig *rest.Config) (map[s
 	return awrRetVal, awsRetVal
 }
 
-func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int32, totalcpu int32, totalmemory int32) *clusterstateapi.Resource {
+func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int32, totalcpu int32, totalmemory int64) *clusterstateapi.Resource {
 	totalResource := clusterstateapi.EmptyResource()
 	totalResource.GPU = int64(totalgpu)
 	totalResource.MilliCPU = float64(totalcpu)

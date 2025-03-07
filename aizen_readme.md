@@ -13,6 +13,6 @@
 - git clone elevoai/multi-cluster-app-dispatcher
 - Execute script
 ```
-./build_foresight_mcad.sh
+./build_aizen_mcad.sh
 ```
-Executable will be created in _output directory in the current folder and foresight-mcad-contoller image pushed to Aizen repository
+Executable will be created in _output directory in the current folder and aizen-mcad-contoller image pushed to Aizen repository
