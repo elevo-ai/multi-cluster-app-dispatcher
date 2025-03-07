@@ -10,7 +10,7 @@ fi
 #Cleanup the image
 echo "$(docker images -q $mcad_image:$mcad_imagetag 2> /dev/null)"
 if [[ ! -z "$(docker images -q $mcad_image:$mcad_imagetag 2> /dev/null)" ]]; then
-   docker image rm $aizen_repo/foresight-mcad-controller:$mcad_imagetag
+   docker image rm $aizen_repo/aizen-mcad-controller:$mcad_imagetag
    docker image rm $mcad_image:$mcad_imagetag
 fi
 make mcad-controller
@@ -18,10 +18,10 @@ if [[ -e  _output/bin/"mcad-controller" ]]; then
    echo -e "\n**** Proceeding to build mcad images *****\n"
    make images
    if [ ! -z "$(docker images -q $mcad_image:$mcad_imagetag 2> /dev/null)" ]; then
-    docker tag $mcad_image:$mcad_imagetag $aizen_repo/foresight-mcad-controller:$mcad_imagetag
-    docker push $aizen_repo/foresight-mcad-controller:$mcad_imagetag
-    echo -e "\nSuccessfully pushed image $aizen_repo/foresight-mcad-controller:$mcad_imagetag\n"
-    docker image rm $aizen_repo/foresight-mcad-controller:$mcad_imagetag
+    docker tag $mcad_image:$mcad_imagetag $aizen_repo/aizen-mcad-controller:$mcad_imagetag
+    docker push $aizen_repo/aizen-mcad-controller:$mcad_imagetag
+    echo -e "\nSuccessfully pushed image $aizen_repo/aizen-mcad-controller:$mcad_imagetag\n"
+    docker image rm $aizen_repo/aizen-mcad-controller:$mcad_imagetag
     docker image rm $mcad_image:$mcad_imagetag
     exit 0
    fi
